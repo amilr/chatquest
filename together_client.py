@@ -7,7 +7,6 @@ class TogetherClient(AIClient):
     def __init__(self, api_key: str):
         super().__init__("Llama")
         self.client = Together(api_key=api_key)
-        self.messages = []
         self.model = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
 
     def init_chat(self):

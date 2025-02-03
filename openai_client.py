@@ -7,7 +7,6 @@ class OpenAIClient(AIClient):
     def __init__(self, api_key: str):
         super().__init__("OpenAI")
         self.client = OpenAI(api_key=api_key)
-        self.messages = []
         self.model = "gpt-4o-mini"
 
     def init_chat(self):

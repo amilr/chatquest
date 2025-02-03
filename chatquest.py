@@ -37,10 +37,6 @@ MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY')
 DEBUGGING = False
 
 world_dict = {}
-ai_client = OpenAIClient(OPENAI_API_KEY)
-#ai_client = TogetherClient(TOGETHER_API_KEY)
-#ai_client = MistralClient(MISTRAL_API_KEY)
-
 
 HELP_TEXT = """I'm here to create a game.
 /newgame <description> to begin a game
@@ -138,13 +134,18 @@ def get_npcs_text(npc_list: List[NPC]) -> tuple[int, str]:
     return ctr, text
 
 async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global world_dict, ai_client
+    global world_dict
 
     #img = imaging.generate_image_large(prompts.CREATE_TOWN_IMAGE.format("You have entered Cogwheel Hollow. A bustling town where robots and humans work side by side, creating intricate gadgets and magical tools. Its towering factories breathe steam and light, while friendly automaton vendors sell clockwork trinkets in lively markets."))
     #await update.message.reply_photo(img)
     #return
 
     world = get_world(update)
+
+    world.ai_client = OpenAIClient(OPENAI_API_KEY)
+    #world.ai_client = TogetherClient(TOGETHER_API_KEY)
+    #world.ai_client = MistralClient(MISTRAL_API_KEY)
+
     world.set_creating()
 
     store_message(update, context)
@@ -152,19 +153,19 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await display_creating_status(update, context)
 
     # create world
-    ai_client.init_chat()
+    world.ai_client.init_chat()
 
     instruction = prompts.CREATE_NEW_GAME.format(update.message.text.replace('/newgame ', ''))
-    ai_client.prompt(instruction)
+    world.ai_client.prompt(instruction)
     
-    world.description = ai_client.get_response()
+    world.description = world.ai_client.get_response()
     print(world.description)
 
     # create towns
     await send_message(update, context, "Creating towns ...")
-    ai_client.prompt(prompts.CREATE_TOWNS)
+    world.ai_client.prompt(prompts.CREATE_TOWNS)
 
-    world.towns = ai_client.get_json_response(type = TownList).items
+    world.towns = world.ai_client.get_json_response(type = TownList).items
     world.map, world.location = world.init_map()
     pprint(world.map)
 
@@ -178,12 +179,12 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         pprint(town)
         
-        ai_client.init_chat()
+        world.ai_client.init_chat()
         
         instruction = prompts.CREATE_PLACES.format(9, world.description, town.description)
-        ai_client.prompt(instruction)
+        world.ai_client.prompt(instruction)
 
-        places = ai_client.get_json_response(type = PlaceList).items
+        places = world.ai_client.get_json_response(type = PlaceList).items
         place_count = 1
         for place in places:
             pprint(place)
@@ -196,14 +197,20 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pprint(world.places_dict)
 
     # create town images
+    town_count = 1
     await send_message(update, context, "Creating pictures ...")
     for town in world.towns:
+        if DEBUGGING:
+            if town_count > 1:
+                continue
+        
         image_data = imaging.generate_image_large(prompts.CREATE_TOWN_IMAGE.format(town.image_prompt))
         world.towns_images.append(image_data)
         if image_data is None:
             print("No image for {}".format(town.name))
         else:
             print("Created image for {}".format(town.name))
+        town_count += 1
 
     # create NPCs
     await send_message(update, context, "Creating characters ...")
@@ -215,12 +222,12 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if town_idx > 1:
                 continue
 
-        ai_client.init_chat()
+        world.ai_client.init_chat()
         
         instruction = prompts.CREATE_NPCS.format(town.description)
-        ai_client.prompt(instruction)
+        world.ai_client.prompt(instruction)
 
-        npc_list = ai_client.get_json_response(type = NPCList).items
+        npc_list = world.ai_client.get_json_response(type = NPCList).items
         pprint(npc_list)
         
         place_keys = [key for key in world.places_dict.keys() if key.startswith(f"{town_idx}:")]
@@ -296,6 +303,7 @@ async def move(update: Update, context: ContextTypes.DEFAULT_TYPE, move):
         await update.message.reply_text("You cannot go that way.")
     else:
         world.location = new_location
+        world.ai_client.init_chat()
 
     town_index, town, place_key, place = world.get_current_place()
     has_entered_new_town = (world.current_town != town)
@@ -362,7 +370,7 @@ async def who(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_image(update, context, gen_image.data, npc_text)
 
 async def attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global world_dict, ai_client
+    global world_dict
 
     world = get_world(update)
 
@@ -376,15 +384,15 @@ async def attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_message(update, context, "Invalid target.")
         else:
             instruction = prompts.ATTACK_NPC.format(target_npc.description)
-            ai_client.prompt(instruction)
+            world.ai_client.prompt(instruction)
             
-            action_result = ai_client.get_response()
+            action_result = world.ai_client.get_response()
             print(f"Action result: {action_result}")
             await send_message(update, context, action_result)
 
             # update NPC description
-            ai_client.prompt(prompts.CHANGE_NPC.format(target_npc.description, target_npc.appearance))
-            updated_npc = ai_client.get_json_response(type = NPC)
+            world.ai_client.prompt(prompts.CHANGE_NPC.format(target_npc.description, target_npc.appearance))
+            updated_npc = world.ai_client.get_json_response(type = NPC)
             target_npc.description = updated_npc.description
             target_npc.appearance = updated_npc.appearance
             print(f"Changed NPC: {target_npc}")
@@ -394,7 +402,7 @@ async def attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Actions
 async def act(update: Update, context: ContextTypes.DEFAULT_TYPE, target: int, action: str):
-    global world_dict, ai_client
+    global world_dict
 
     world = get_world(update)
 
@@ -404,20 +412,22 @@ async def act(update: Update, context: ContextTypes.DEFAULT_TYPE, target: int, a
     if target_npc is None:
         await send_message(update, context, "Invalid target.")
     else:
-        ai_client.init_chat()
-
         instruction = prompts.ACTION_NPC.format(action, target_npc.description)
-        ai_client.prompt(instruction)
+        world.ai_client.prompt(instruction)
         
-        action_result = ai_client.get_response()
+        action_result = world.ai_client.get_response()
         print(f"Action result: {action_result}")
         await send_message(update, context, action_result)
 
         # update NPC description
-        ai_client.prompt(prompts.CHANGE_NPC.format(target_npc.description, target_npc.appearance))
-        updated_npc = ai_client.get_json_response(type = NPC)
-        target_npc.description = updated_npc.description
-        target_npc.appearance = updated_npc.appearance
+        world.ai_client.prompt(prompts.CHANGE_NPC_DESCRIPTION.format(target_npc.description))
+        updated_description = world.ai_client.get_response()
+        target_npc.description = updated_description
+
+        world.ai_client.prompt(prompts.CHANGE_NPC_APPEARANCE.format(target_npc.appearance))
+        updated_appearance = world.ai_client.get_response()
+        target_npc.appearance = updated_appearance
+        
         print(f"Changed NPC: {target_npc}")
 
         # update place image
@@ -442,7 +452,6 @@ async def act_4(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = update.message.text.split(' ', 1)
     action = parts[1]
     await act(update, context, 4, action)
-
 
 def main():
     db.connect_to_db(dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT)

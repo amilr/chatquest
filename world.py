@@ -45,6 +45,7 @@ class World:
         self.places_dict: Dict[str, Place] = {}
         self.places_images_dict: Dict[str, GenImage] = {}
         self.npcs_dict: Dict[str, List[NPC]] = {}
+        self.ai_client = None
 
         self.status = WorldStatus.NotStarted
         self.current_town = None

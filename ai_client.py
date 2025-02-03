@@ -3,6 +3,10 @@ from pprint import pprint
 class AIClient:
     def __init__(self, name: str):
         self.name = name
+        self.messages = []
+
+    def init_chat(self):
+        self.messages = []
 
     def log_prompt(self, prompt: str):
         label = "= " + self.name + " prompt "

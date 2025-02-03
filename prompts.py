@@ -41,9 +41,9 @@ A vibrant 16-bit SNES-era pixel art town. Hand-crafted pixel details, NPCs walki
 """
 
 CREATE_NPCS = """
-Describe 10 characters that might be found in this town and what they are doing at the moment.
-Keep the description short and simple and within 1 sentence per character.
-Also describe the physical appearance of the charactersin 8-10 sentences. Mention color of skin and clothes. Make it cartoonish.
+Describe 9 characters that might be found in this town and what they are doing at the moment.
+Keep the description simple and within 1 sentence per character.
+Also describe the physical appearance of the characters within 10 sentences. Mention color of skin and clothes.
 
 <TOWN>
 {}
@@ -79,8 +79,22 @@ Previous appearance:
 {}
 """
 
+CHANGE_NPC_DESCRIPTION = """
+Change the description for the NPC given what happened. Keep the wording simple and within 1 sentence."
+
+Previous description:
+{}
+"""
+
+CHANGE_NPC_APPEARANCE = """
+Change the physical appearance of the NPC also. Keep the wording simple and within 10 sentences."
+
+Previous appearance:
+{}
+"""
+
 ACTION_NPC = """
-The player performs an action on the NPC. Describe what happens. Keep the description within 1 sentence.
+The player performs an action on the NPC. Describe what happens. Keep the description within 5 sentences.
 
 <ACTION>
 {}
@@ -94,6 +108,4 @@ The player performs an action on the NPC. Describe what happens. Keep the descri
 CREATE_PLACE_IMAGE = """
 Draw all these {} characters together:
 {}
-
-SNES-style JPRG pixel art
 """
