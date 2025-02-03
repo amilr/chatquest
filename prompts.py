@@ -15,8 +15,7 @@ Keep the description short and simple and within 3 sentences.
 CREATE_TOWNS = """
 Describe the name and descriptions of 5 towns set in this world.
 Keep the description short and simple and within 3 sentences.
-Create a prompt that would describe this town in more detail for use in an image generator. Use up to 10 sentences for the prompt.
-Extract the name, description, and image prompt of the towns.
+Extract the name and description of the towns.
 """
 
 CREATE_PLACES = """

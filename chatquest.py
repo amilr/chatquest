@@ -4,7 +4,7 @@ from typing import Dict, List
 from enum import Enum
 from pprint import pprint
 import database as db
-import prompts
+import prompts, metaprompts
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -113,6 +113,13 @@ async def display_none_status(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def display_creating_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_message(update, context, "Please wait while I create a new world for you.")
 
+def new_world(update: Update):
+    chat_id = update.effective_chat.id
+    new_world = World()
+    world_dict[chat_id] = new_world
+    print(f'Created world: {chat_id}')
+    return new_world
+
 def get_world(update: Update):
     chat_id = update.effective_chat.id
     
@@ -140,7 +147,7 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #await update.message.reply_photo(img)
     #return
 
-    world = get_world(update)
+    world = new_world(update)
 
     world.ai_client = OpenAIClient(OPENAI_API_KEY)
     #world.ai_client = TogetherClient(TOGETHER_API_KEY)
@@ -204,7 +211,12 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if town_count > 1:
                 continue
         
-        image_data = imaging.generate_image_large(prompts.CREATE_TOWN_IMAGE.format(town.image_prompt))
+        meta_prompt = metaprompts.TOWN_IMAGE.format(town.description)
+        world.ai_client.reset()
+        world.ai_client.prompt(meta_prompt)
+        img_prompt = world.ai_client.get_response()
+
+        image_data = imaging.generate_image_large(img_prompt)
         world.towns_images.append(image_data)
         if image_data is None:
             print("No image for {}".format(town.name))
@@ -244,7 +256,13 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             print(f'Creating image: {place_key}')
             num, npcs_text = get_npcs_text(npc_list)
-            image = imaging.generate_image_dynamic(prompts.CREATE_PLACE_IMAGE.format(num, npcs_text), cells = num)
+            meta_prompt = metaprompts.CHARACTERS.format(npcs_text)
+
+            world.ai_client.reset()
+            world.ai_client.prompt(meta_prompt)
+            img_prompt = world.ai_client.get_response()
+
+            image = imaging.generate_image_dynamic(img_prompt, cells = num)
             gen_image = GenImage(data=image, dirty=False)
             world.places_images_dict[place_key] = gen_image
 
@@ -363,7 +381,14 @@ async def who(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if gen_image.dirty:
             # regenerate image
             num, npcs_text = get_npcs_text(world.get_npcs())
-            image = imaging.generate_image_dynamic(prompts.CREATE_PLACE_IMAGE.format(num, npcs_text), cells = num)
+
+            meta_prompt = metaprompts.CHARACTERS.format(npcs_text)
+
+            world.ai_client.reset()
+            world.ai_client.prompt(meta_prompt)
+            img_prompt = world.ai_client.get_response()
+
+            image = imaging.generate_image_dynamic(img_prompt, cells = num)
             gen_image.data = image
             gen_image.dirty = False
 

@@ -5,6 +5,9 @@ class AIClient:
         self.name = name
         self.messages = []
 
+    def reset(self):
+        self.messages = []
+
     def init_chat(self):
         self.messages = []
 

@@ -2,12 +2,16 @@ import os
 import requests
 from io import BytesIO
 
+def log_prompt(prompt: str):
+    label = "= imaging prompt "
+    print(label + ("=" * (50 - len(label))))
+    print(prompt.strip())
+    print("=" * 50)
+
 def generate_image(prompt: str, width: int, height: int) -> bytes:
     TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
     
-    print("Image prompt ==================================")
-    print(prompt)
-    print("===============================================")
+    log_prompt(prompt)
     
     try:
         url = "https://api.together.xyz/v1/images/generations"

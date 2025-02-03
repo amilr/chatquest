@@ -8,7 +8,6 @@ Point = namedtuple('Point', ['x', 'y'])
 class Town(BaseModel):
     name: str
     description: str
-    image_prompt: str
 
 class Place(BaseModel):
     description: str
