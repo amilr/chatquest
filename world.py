@@ -99,6 +99,14 @@ class World:
         else:
             return None
 
+    def add_npc(self, npc: NPC):
+        place_key = self.get_place_key()
+        self.npcs_dict[place_key].append(npc)
+        if self.places_npc_images_dict[place_key] is None:
+            self.places_npc_images_dict[place_key] = GenImage(data=bytes(), dirty=True)
+        else:
+            self.places_npc_images_dict[place_key].dirty = True
+
     def get_place_image(self) -> GenImage:
         return self.places_npc_images_dict[self.get_place_key()]
 

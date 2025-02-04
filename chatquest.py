@@ -34,7 +34,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
 MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY')
 
-DEBUGGING = True
+DEBUGGING = False
 
 world_dict = {}
 
@@ -166,6 +166,7 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     world.metaprompter = OpenAIClient(OPENAI_API_KEY)
     #world.ai_client = TogetherClient(TOGETHER_API_KEY)
     #world.ai_client = MistralClient(MISTRAL_API_KEY)
+    #world.metaprompter = MistralClient(MISTRAL_API_KEY)
 
     world.set_creating()
 
@@ -502,9 +503,26 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(parts) == 1:
         return None
     else:
-        world = get_world(update)
         action = 'say "{}"'.format(parts[1])
         await act(update, context, world.selected_npc_index, action)
+
+async def addnpc(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global world_dict
+
+    world = get_world(update)
+    
+    parts = update.message.text.split(' ', 1)
+    if len(parts) == 1:
+        return None
+        
+    npc_parts = parts[1].split('|')
+    description = npc_parts[0].strip()
+    appearance = npc_parts[1].strip()
+
+    npc = NPC(description=description, appearance=appearance)
+    world.add_npc(npc)
+
+    await send_message(update, context, "NPC added")
 
 def main():
     db.connect_to_db(dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT)
@@ -526,6 +544,7 @@ def main():
     application.add_handler(CommandHandler("3", act_3))
     application.add_handler(CommandHandler("4", act_4))
     application.add_handler(CommandHandler("talk", talk))
+    application.add_handler(CommandHandler("addnpc", addnpc))
 
     application.run_polling(stop_signals=None)
 

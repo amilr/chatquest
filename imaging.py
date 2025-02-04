@@ -23,7 +23,7 @@ def clean_prompt(prompt: str) -> str:
 def generate_image(prompt: str, width: int, height: int) -> bytes:
     TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
     
-    prompt = clean_prompt(prompt)
+    #prompt = clean_prompt(prompt)
     log_prompt(prompt)
     
     try:
