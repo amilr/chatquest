@@ -36,15 +36,17 @@ class GenImage(BaseModel):
 
 class World:
     def __init__(self):
+        self.ai_client = None
+        self.metaprompter = None
         self.description = None
         self.towns: List[Town] = None
         self.towns_images: List[bytes] = []
         self.map = None
         self.location = None
         self.places_dict: Dict[str, Place] = {}
-        self.places_images_dict: Dict[str, GenImage] = {}
+        self.places_npc_images_dict: Dict[str, GenImage] = {}
         self.npcs_dict: Dict[str, List[NPC]] = {}
-        self.ai_client = None
+        self.selected_npc_index = 0
 
         self.status = WorldStatus.NotStarted
         self.current_town = None
@@ -98,10 +100,10 @@ class World:
             return None
 
     def get_place_image(self) -> GenImage:
-        return self.places_images_dict[self.get_place_key()]
+        return self.places_npc_images_dict[self.get_place_key()]
 
     def set_place_image(self, image: bytes):
-        self.places_images_dict[self.get_place_key()].data = image
+        self.places_npc_images_dict[self.get_place_key()].data = image
 
     def can_move(self, location: Point) -> bool:
         if location.x < 0 or location.y < 0:

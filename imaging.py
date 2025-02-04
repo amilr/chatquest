@@ -8,9 +8,22 @@ def log_prompt(prompt: str):
     print(prompt.strip())
     print("=" * 50)
 
+def clean_prompt(prompt: str) -> str:
+    # Check and clean up the prompt if needed
+    lines = prompt.split('\n')
+    if 'prompt' in lines[0].lower():
+        prompt = '\n'.join(lines[1:]).strip()
+    
+    # Remove wrapping double quotes if present
+    if prompt.startswith('"') and prompt.endswith('"'):
+        prompt = prompt[1:-1]
+
+    return prompt
+
 def generate_image(prompt: str, width: int, height: int) -> bytes:
     TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
     
+    prompt = clean_prompt(prompt)
     log_prompt(prompt)
     
     try:

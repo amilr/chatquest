@@ -42,7 +42,7 @@ A vibrant 16-bit SNES-era pixel art town. Hand-crafted pixel details, NPCs walki
 CREATE_NPCS = """
 Describe 9 characters that might be found in this town and what they are doing at the moment.
 Keep the description simple and within 1 sentence per character.
-Also describe the physical appearance of the characters within 10 sentences. Mention color of skin and clothes.
+Also describe the physical appearance of the characters in 8-10 sentences. Mention the style and color of the hair, the color of skin, and style and color of clothing.
 
 <TOWN>
 {}
@@ -86,14 +86,16 @@ Previous description:
 """
 
 CHANGE_NPC_APPEARANCE = """
-Change the physical appearance of the NPC also. Keep the wording simple and within 10 sentences."
+Change the physical appearance of the NPC only if it is affected by what happened.
+Mention the style and color of the hair, the color of skin, and style and color of clothing.
+Keep the wording simple and within 10 sentences."
 
 Previous appearance:
 {}
 """
 
 ACTION_NPC = """
-The player performs an action on the NPC. Describe what happens. Keep the description within 5 sentences.
+The player performs an action on the NPC. Describe what happens. Keep the description within 3 sentences.
 
 <ACTION>
 {}

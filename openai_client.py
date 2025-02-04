@@ -22,9 +22,10 @@ class OpenAIClient(AIClient):
 
     def get_response(self):
         response = self.client.chat.completions.create(
-            model = self.model,
-            messages = self.messages,
-            temperature = 1.0
+            model=self.model,
+            messages=self.messages,
+            temperature=1.0,
+            timeout=20
         )
 
         text = response.choices[0].message.content
@@ -32,12 +33,23 @@ class OpenAIClient(AIClient):
         return text
     
     def get_json_response(self, type):
-        completion = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages = self.messages,
-            response_format = type,
-            temperature = 1.0
-        )
+        try:
+            completion = self.client.beta.chat.completions.parse(
+                model=self.model,
+                messages=self.messages,
+                response_format=type,
+                temperature=1.0,
+                timeout=20
+            )
+        except Exception:
+            print('retrying ...')
+            completion = self.client.beta.chat.completions.parse(
+                model=self.model,
+                messages=self.messages,
+                response_format=type,
+                temperature=1.0,
+                timeout=20
+            )
 
         data = completion.choices[0].message.parsed
         self.log_response_object(data)

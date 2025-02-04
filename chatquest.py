@@ -34,7 +34,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
 MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY')
 
-DEBUGGING = False
+DEBUGGING = True
 
 world_dict = {}
 
@@ -44,6 +44,7 @@ HELP_TEXT = """I'm here to create a game.
 /who to find characters
 /n /s /e /w to move
 /1 /2 /... <action> to interact with characters
+/talk <message> to talk to the selected character (use /1 /2 /etc first to select a character)
 """
 
 def register_game_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -140,6 +141,18 @@ def get_npcs_text(npc_list: List[NPC]) -> tuple[int, str]:
         text += "{}. {} {}\n".format(ctr, npc.description, npc.appearance)
     return ctr, text
 
+def get_npcs_image(metaprompter, npc_list) -> bytes:
+    num, npcs_text = get_npcs_text(npc_list)
+    meta_prompt = metaprompts.CHARACTERS.format(npcs_text)
+
+    metaprompter.reset()
+    metaprompter.prompt(meta_prompt)
+    img_prompt = metaprompter.get_response()
+    
+    image = imaging.generate_image_dynamic(img_prompt, cells = num)
+    return image
+
+
 async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global world_dict
 
@@ -150,6 +163,7 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     world = new_world(update)
 
     world.ai_client = OpenAIClient(OPENAI_API_KEY)
+    world.metaprompter = OpenAIClient(OPENAI_API_KEY)
     #world.ai_client = TogetherClient(TOGETHER_API_KEY)
     #world.ai_client = MistralClient(MISTRAL_API_KEY)
 
@@ -212,9 +226,9 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 continue
         
         meta_prompt = metaprompts.TOWN_IMAGE.format(town.description)
-        world.ai_client.reset()
-        world.ai_client.prompt(meta_prompt)
-        img_prompt = world.ai_client.get_response()
+        world.metaprompter.reset()
+        world.metaprompter.prompt(meta_prompt)
+        img_prompt = world.metaprompter.get_response()
 
         image_data = imaging.generate_image_large(img_prompt)
         world.towns_images.append(image_data)
@@ -248,23 +262,17 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
             world.npcs_dict[selected_place_key].append(npc)
             pprint("{} - adding: {}".format(selected_place_key, npc.description))
 
-    # create place images
-    await send_message(update, context, "Creating more pictures ...")
+    # create NPC images by place
+    await send_message(update, context, "Creating more pictures for the characters ...")
     for place_key, npc_list in world.npcs_dict.items():
         if len(npc_list) == 0:
-            world.places_images_dict[place_key] = None
+            world.places_npc_images_dict[place_key] = None
         else:
             print(f'Creating image: {place_key}')
-            num, npcs_text = get_npcs_text(npc_list)
-            meta_prompt = metaprompts.CHARACTERS.format(npcs_text)
 
-            world.ai_client.reset()
-            world.ai_client.prompt(meta_prompt)
-            img_prompt = world.ai_client.get_response()
-
-            image = imaging.generate_image_dynamic(img_prompt, cells = num)
+            image = get_npcs_image(world.metaprompter, npc_list)
             gen_image = GenImage(data=image, dirty=False)
-            world.places_images_dict[place_key] = gen_image
+            world.places_npc_images_dict[place_key] = gen_image
 
     await send_message(update, context, world.description)
     
@@ -318,7 +326,7 @@ async def move(update: Update, context: ContextTypes.DEFAULT_TYPE, move):
         new_location = Point(world.location.x - 1, world.location.y)
 
     if not world.can_move(new_location):
-        await update.message.reply_text("You cannot go that way.")
+        await update.message.reply_text("You  cannot go that way.")
     else:
         world.location = new_location
         world.ai_client.init_chat()
@@ -326,6 +334,7 @@ async def move(update: Update, context: ContextTypes.DEFAULT_TYPE, move):
     town_index, town, place_key, place = world.get_current_place()
     has_entered_new_town = (world.current_town != town)
     world.current_town = town
+    world.selected_npc_index = 0
 
     await describe_scene(update, context, town_index, town, place_key, place, has_entered_new_town)
     
@@ -380,16 +389,7 @@ async def who(update: Update, context: ContextTypes.DEFAULT_TYPE):
         gen_image = world.get_place_image()
         if gen_image.dirty:
             # regenerate image
-            num, npcs_text = get_npcs_text(world.get_npcs())
-
-            meta_prompt = metaprompts.CHARACTERS.format(npcs_text)
-
-            world.ai_client.reset()
-            world.ai_client.prompt(meta_prompt)
-            img_prompt = world.ai_client.get_response()
-
-            image = imaging.generate_image_dynamic(img_prompt, cells = num)
-            gen_image.data = image
+            gen_image.data = get_npcs_image(world.ai_client, world.get_npcs())
             gen_image.dirty = False
 
         await send_image(update, context, gen_image.data, npc_text)
@@ -423,7 +423,7 @@ async def attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print(f"Changed NPC: {target_npc}")
 
             # update place image
-            world.places_images_dict[world.get_place_key()].dirty = True
+            world.places_npc_images_dict[world.get_place_key()].dirty = True
 
 # Actions
 async def act(update: Update, context: ContextTypes.DEFAULT_TYPE, target: int, action: str):
@@ -456,27 +456,55 @@ async def act(update: Update, context: ContextTypes.DEFAULT_TYPE, target: int, a
         print(f"Changed NPC: {target_npc}")
 
         # update place image
-        world.places_images_dict[world.get_place_key()].dirty = True
+        world.places_npc_images_dict[world.get_place_key()].dirty = True
+
+def get_action(update: Update, selected_npc_index: int) -> str:
+    global world_dict
+
+    world = get_world(update)
+    world.selected_npc_index = selected_npc_index
+
+    parts = update.message.text.split(' ', 1)
+    if len(parts) == 1:
+        return None
+    else:
+        return parts[1]
 
 async def act_1(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    parts = update.message.text.split(' ', 1)
-    action = parts[1]
-    await act(update, context, 1, action)
+    action = get_action(update, 1)
+    if action is not None:
+        await act(update, context, 1, action)
 
 async def act_2(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    parts = update.message.text.split(' ', 1)
-    action = parts[1]
-    await act(update, context, 2, action)
+    action = get_action(update, 2)
+    if action is not None:
+        await act(update, context, 2, action)
 
 async def act_3(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    parts = update.message.text.split(' ', 1)
-    action = parts[1]
-    await act(update, context, 3, action)
+    action = get_action(update, 2)
+    if action is not None:
+        await act(update, context, 2, action)
 
 async def act_4(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    action = get_action(update, 2)
+    if action is not None:
+        await act(update, context, 2, action)
+
+async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global world_dict
+
+    world = get_world(update)
+    if world.selected_npc_index == 0:
+        await send_message(update, context, "You are not talking to anyone.")
+        return
+    
     parts = update.message.text.split(' ', 1)
-    action = parts[1]
-    await act(update, context, 4, action)
+    if len(parts) == 1:
+        return None
+    else:
+        world = get_world(update)
+        action = 'say "{}"'.format(parts[1])
+        await act(update, context, world.selected_npc_index, action)
 
 def main():
     db.connect_to_db(dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT)
@@ -497,6 +525,7 @@ def main():
     application.add_handler(CommandHandler("2", act_2))
     application.add_handler(CommandHandler("3", act_3))
     application.add_handler(CommandHandler("4", act_4))
+    application.add_handler(CommandHandler("talk", talk))
 
     application.run_polling(stop_signals=None)
 
