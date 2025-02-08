@@ -13,7 +13,7 @@ Keep the description short and simple and within 3 sentences.
 """
 
 CREATE_TOWNS = """
-Describe the name and descriptions of 5 towns set in this world.
+Describe the name and descriptions of {} towns set in this world.
 Keep the description short and simple and within 3 sentences.
 Extract the name and description of the towns.
 """
@@ -40,7 +40,7 @@ A vibrant 16-bit SNES-era pixel art town. Hand-crafted pixel details, NPCs walki
 """
 
 CREATE_NPCS = """
-Describe 6 characters that might be found in this town and what they are doing at the moment.
+Describe {} characters that might be found in this town and what they are doing at the moment.
 Keep the description simple and within 1 sentence per character.
 Also describe the physical appearance of the characters in 8-10 sentences. Mention the style and color of the hair, the color of skin, and style and color of clothing.
 

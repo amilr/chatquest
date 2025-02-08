@@ -36,7 +36,7 @@ class GenImage(BaseModel):
 
 class World:
     def __init__(self):
-        self.ai_client = None
+        self.ai = None
         self.metaprompter = None
         self.description = None
         self.towns: List[Town] = None
@@ -80,7 +80,7 @@ class World:
             self.npcs_dict[key] = []
 
     def get_place_key(self) -> str:
-        return self.map[self.location.x][self.location.y]
+        return self.map[self.location.y - 1][self.location.x - 1]
 
     def get_current_place(self) -> tuple[int, Town, str, Place]:
         place_key = self.get_place_key()
@@ -114,11 +114,11 @@ class World:
         self.places_npc_images_dict[self.get_place_key()].data = image
 
     def can_move(self, location: Point) -> bool:
-        if location.x < 0 or location.y < 0:
+        if location.x < 1 or location.y < 1:
             return False
-        if location.x >= len(self.map) or location.y >= len(self.map):
+        if location.x > len(self.map[0]) or location.y > len(self.map):
             return False
-        return self.map[location.x][location.y] != ''
+        return self.map[location.y - 1][location.x - 1] != ''
     
     def set_creating(self):
         self.status = WorldStatus.Creating

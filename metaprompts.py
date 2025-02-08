@@ -1,6 +1,6 @@
 
 TOWN_IMAGE = """
-Create a prompt for the image generator FLUX.1 schnell so that it renders the specified town in 16-bit, SNES-style, JRPG-style pixel art in isomeetric view.
+Create a prompt for the image generator FLUX.1 schnell so that it renders the specified town in 16-bit, SNES-style, JRPG-style pixel art in isometric view.
 
 <TOWN>
 {}
@@ -8,7 +8,7 @@ Create a prompt for the image generator FLUX.1 schnell so that it renders the sp
 """
 
 CHARACTERS = """
-Create a prompt for the image generator FLUX.1 schnell so that it renders the following character or characters in 16-bit, SNES-style, anime style pixel art.
+Create a prompt for the image generator FLUX.1 schnell so that it renders the following character or characters in 16-bit, SNES-style, anime style art.
 
 <CHARACTERS>
 {}

@@ -5,6 +5,7 @@ from enum import Enum
 from pprint import pprint
 import database as db
 import prompts, metaprompts
+import mapgenerator as mapg
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -33,8 +34,6 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
 MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY')
-
-DEBUGGING = False
 
 world_dict = {}
 
@@ -152,6 +151,9 @@ def get_npcs_image(metaprompter, npc_list) -> bytes:
     image = imaging.generate_image_dynamic(img_prompt, cells = num)
     return image
 
+def print_map(grid):
+    for row in grid:
+        print(str(row).replace("''", "'   '"))
 
 async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global world_dict
@@ -162,7 +164,7 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     world = new_world(update)
 
-    world.ai_client = OpenAIClient(OPENAI_API_KEY)
+    world.ai = OpenAIClient(OPENAI_API_KEY)
     world.metaprompter = OpenAIClient(OPENAI_API_KEY)
     #world.ai_client = TogetherClient(TOGETHER_API_KEY)
     #world.ai_client = MistralClient(MISTRAL_API_KEY)
@@ -175,38 +177,42 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await display_creating_status(update, context)
 
     # create world
-    world.ai_client.init_chat()
+    world.ai.init_chat()
 
     instruction = prompts.CREATE_NEW_GAME.format(update.message.text.replace('/newgame ', ''))
-    world.ai_client.prompt(instruction)
+    world.ai.prompt(instruction)
     
-    world.description = world.ai_client.get_response()
+    world.description = world.ai.get_response()
     print(world.description)
+
+    # world.map, world.location = world.init_map()
+    # create world map
+    grid, town_places_count, start_location = mapg.generate_map(3, 2, 3)
+
+    print_map(grid)
+    pprint(town_places_count)
+    pprint(start_location)
+
+    world.map = grid
+    world.location = Point(start_location[0], start_location[1])
 
     # create towns
     await send_message(update, context, "Creating towns ...")
-    world.ai_client.prompt(prompts.CREATE_TOWNS)
-
-    world.towns = world.ai_client.get_json_response(type = TownList).items
-    world.map, world.location = world.init_map()
-    pprint(world.map)
+    world.ai.prompt(prompts.CREATE_TOWNS.format(len(town_places_count)))
+    world.towns = world.ai.get_json_response(type = TownList).items
 
     # create places in towns
     await send_message(update, context, "Creating places ...")
     town_count = 1
     for town in world.towns:
-        if DEBUGGING:
-            if town_count > 1:
-                continue
-
         pprint(town)
         
-        world.ai_client.init_chat()
+        world.ai.init_chat()
         
-        instruction = prompts.CREATE_PLACES.format(9, world.description, town.description)
-        world.ai_client.prompt(instruction)
+        instruction = prompts.CREATE_PLACES.format(town_places_count[town_count], world.description, town.description)
+        world.ai.prompt(instruction)
 
-        places = world.ai_client.get_json_response(type = PlaceList).items
+        places = world.ai.get_json_response(type = PlaceList).items
         place_count = 1
         for place in places:
             pprint(place)
@@ -222,10 +228,6 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     town_count = 1
     await send_message(update, context, "Creating pictures ...")
     for town in world.towns:
-        if DEBUGGING:
-            if town_count > 1:
-                continue
-        
         meta_prompt = metaprompts.TOWN_IMAGE.format(town.description)
         world.metaprompter.reset()
         world.metaprompter.prompt(meta_prompt)
@@ -245,16 +247,12 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for idx, town in enumerate(world.towns):
         town_idx = idx + 1
         
-        if DEBUGGING:
-            if town_idx > 1:
-                continue
-
-        world.ai_client.init_chat()
+        world.ai.init_chat()
         
-        instruction = prompts.CREATE_NPCS.format(town.description)
-        world.ai_client.prompt(instruction)
+        instruction = prompts.CREATE_NPCS.format(town_places_count[town_idx], town.description)
+        world.ai.prompt(instruction)
 
-        npc_list = world.ai_client.get_json_response(type = NPCList).items
+        npc_list = world.ai.get_json_response(type = NPCList).items
         pprint(npc_list)
         
         place_keys = [key for key in world.places_dict.keys() if key.startswith(f"{town_idx}:")]
@@ -263,17 +261,12 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
             world.npcs_dict[selected_place_key].append(npc)
             pprint("{} - adding: {}".format(selected_place_key, npc.description))
 
-    # create NPC images by place
-    await send_message(update, context, "Creating more pictures for the characters ...")
+    # initialize empty image objects for the NPCs in each place
     for place_key, npc_list in world.npcs_dict.items():
         if len(npc_list) == 0:
             world.places_npc_images_dict[place_key] = None
         else:
-            print(f'Creating image: {place_key}')
-
-            image = get_npcs_image(world.metaprompter, npc_list)
-            gen_image = GenImage(data=image, dirty=False)
-            world.places_npc_images_dict[place_key] = gen_image
+            world.places_npc_images_dict[place_key] = GenImage(data=bytes(), dirty=True)
 
     await send_message(update, context, world.description)
     
@@ -281,13 +274,18 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     world.current_town = town
     await describe_scene(update, context, town_index, town, place_key, place, True)
 
+    #world.metaprompter = MistralClient(MISTRAL_API_KEY)
+
     world.set_started()
 
 async def describe_scene(update: Update, context: ContextTypes.DEFAULT_TYPE, town_index, town, place_key, place, has_entered_new_town):
     global world_dict
 
     world = get_world(update)
-    
+
+    print_map(world.map)
+    print("{} -> {}".format(world.location, world.get_place_key()))
+
     scene = None
     if has_entered_new_town:
         scene = "You have entered {0}. {1}".format(town.name, town.description)
@@ -330,7 +328,7 @@ async def move(update: Update, context: ContextTypes.DEFAULT_TYPE, move):
         await update.message.reply_text("You  cannot go that way.")
     else:
         world.location = new_location
-        world.ai_client.init_chat()
+        world.ai.init_chat()
 
     town_index, town, place_key, place = world.get_current_place()
     has_entered_new_town = (world.current_town != town)
@@ -390,7 +388,7 @@ async def who(update: Update, context: ContextTypes.DEFAULT_TYPE):
         gen_image = world.get_place_image()
         if gen_image.dirty:
             # regenerate image
-            gen_image.data = get_npcs_image(world.ai_client, world.get_npcs())
+            gen_image.data = get_npcs_image(world.ai, world.get_npcs())
             gen_image.dirty = False
 
         await send_image(update, context, gen_image.data, npc_text)
@@ -410,15 +408,15 @@ async def attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_message(update, context, "Invalid target.")
         else:
             instruction = prompts.ATTACK_NPC.format(target_npc.description)
-            world.ai_client.prompt(instruction)
+            world.ai.prompt(instruction)
             
-            action_result = world.ai_client.get_response()
+            action_result = world.ai.get_response()
             print(f"Action result: {action_result}")
             await send_message(update, context, action_result)
 
             # update NPC description
-            world.ai_client.prompt(prompts.CHANGE_NPC.format(target_npc.description, target_npc.appearance))
-            updated_npc = world.ai_client.get_json_response(type = NPC)
+            world.ai.prompt(prompts.CHANGE_NPC.format(target_npc.description, target_npc.appearance))
+            updated_npc = world.ai.get_json_response(type = NPC)
             target_npc.description = updated_npc.description
             target_npc.appearance = updated_npc.appearance
             print(f"Changed NPC: {target_npc}")
@@ -439,19 +437,19 @@ async def act(update: Update, context: ContextTypes.DEFAULT_TYPE, target: int, a
         await send_message(update, context, "Invalid target.")
     else:
         instruction = prompts.ACTION_NPC.format(action, target_npc.description)
-        world.ai_client.prompt(instruction)
+        world.ai.prompt(instruction)
         
-        action_result = world.ai_client.get_response()
+        action_result = world.ai.get_response()
         print(f"Action result: {action_result}")
         await send_message(update, context, action_result)
 
         # update NPC description
-        world.ai_client.prompt(prompts.CHANGE_NPC_DESCRIPTION.format(target_npc.description))
-        updated_description = world.ai_client.get_response()
+        world.ai.prompt(prompts.CHANGE_NPC_DESCRIPTION.format(target_npc.description))
+        updated_description = world.ai.get_response()
         target_npc.description = updated_description
 
-        world.ai_client.prompt(prompts.CHANGE_NPC_APPEARANCE.format(target_npc.appearance))
-        updated_appearance = world.ai_client.get_response()
+        world.ai.prompt(prompts.CHANGE_NPC_APPEARANCE.format(target_npc.appearance))
+        updated_appearance = world.ai.get_response()
         target_npc.appearance = updated_appearance
         
         print(f"Changed NPC: {target_npc}")

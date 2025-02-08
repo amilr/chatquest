@@ -11,6 +11,10 @@ def log_prompt(prompt: str):
 def clean_prompt(prompt: str) -> str:
     # Check and clean up the prompt if needed
     lines = prompt.split('\n')
+
+    if len(lines) == 1:
+        return prompt
+
     if 'prompt' in lines[0].lower():
         prompt = '\n'.join(lines[1:]).strip()
     
@@ -23,7 +27,7 @@ def clean_prompt(prompt: str) -> str:
 def generate_image(prompt: str, width: int, height: int) -> bytes:
     TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
     
-    #prompt = clean_prompt(prompt)
+    prompt = clean_prompt(prompt)
     log_prompt(prompt)
     
     try:

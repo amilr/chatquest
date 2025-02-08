@@ -11,6 +11,12 @@ class AIClient:
     def init_chat(self):
         self.messages = []
 
+    def log_role(self, prompt: str):
+        label = "= " + self.name + " prompt "
+        print(label + ("=" * (50 - len(label))))
+        print(prompt.strip())
+        print("=" * 50)
+
     def log_prompt(self, prompt: str):
         label = "= " + self.name + " prompt "
         print(label + ("=" * (50 - len(label))))

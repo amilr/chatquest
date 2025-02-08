@@ -17,14 +17,14 @@ class MistralClient(AIClient):
         # Create an HTTP client with the timeout settings
         http_client = httpx.Client(timeout=timeout_settings)
         self.client = Mistral(api_key=api_key, client=http_client)
-        self.model = "mistral-large-latest"
+        self.model = "mistral-small-latest"
 
     def init_chat(self):
         self.messages = [
             { "role": "system", "content": prompts.AGENT_ROLE }
         ]
     
-        self.log_prompt(prompts.AGENT_ROLE)
+        self.log_role(prompts.AGENT_ROLE)
 
     def prompt(self, text: str):
         self.messages.append({ "role": "user", "content": text })

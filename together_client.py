@@ -14,7 +14,7 @@ class TogetherClient(AIClient):
             { "role": "system", "content": prompts.AGENT_ROLE }
         ]
     
-        self.log_prompt(prompts.AGENT_ROLE)
+        self.log_role(prompts.AGENT_ROLE)
 
     def prompt(self, text: str):
         self.messages.append({ "role": "user", "content": text })
