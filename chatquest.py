@@ -164,11 +164,12 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     world = new_world(update)
 
-    world.ai = OpenAIClient(OPENAI_API_KEY)
-    world.metaprompter = OpenAIClient(OPENAI_API_KEY)
-    #world.ai_client = TogetherClient(TOGETHER_API_KEY)
-    #world.ai_client = MistralClient(MISTRAL_API_KEY)
-    #world.metaprompter = MistralClient(MISTRAL_API_KEY)
+    #world.ai = OpenAIClient(OPENAI_API_KEY)
+    #world.metaprompter = OpenAIClient(OPENAI_API_KEY)
+    #world.ai = TogetherClient(TOGETHER_API_KEY)
+    #world.metaprompter = TogetherClient(TOGETHER_API_KEY)
+    world.ai = MistralClient(MISTRAL_API_KEY)
+    world.metaprompter = MistralClient(MISTRAL_API_KEY)
 
     world.set_creating()
 
@@ -185,7 +186,6 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     world.description = world.ai.get_response()
     print(world.description)
 
-    # world.map, world.location = world.init_map()
     # create world map
     grid, town_places_count, start_location = mapg.generate_map(3, 2, 3)
 
@@ -273,8 +273,6 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     town_index, town, place_key, place = world.get_current_place()
     world.current_town = town
     await describe_scene(update, context, town_index, town, place_key, place, True)
-
-    #world.metaprompter = MistralClient(MISTRAL_API_KEY)
 
     world.set_started()
 
