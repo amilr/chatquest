@@ -12,6 +12,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from openai_client import OpenAIClient
 from together_client import TogetherClient
 from mistral_client import MistralClient
+from groq_client import GroqClient
 
 import imaging
 from world import World, Town, Place, NPC, Point, TownList, PlaceList, NPCList, GenImage
@@ -34,6 +35,7 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
 MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
 world_dict = {}
 
@@ -168,6 +170,8 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #world.metaprompter = OpenAIClient(OPENAI_API_KEY)
     #world.ai = TogetherClient(TOGETHER_API_KEY)
     #world.metaprompter = TogetherClient(TOGETHER_API_KEY)
+    #world.ai = GroqClient(GROQ_API_KEY)
+    #world.metaprompter = GroqClient(GROQ_API_KEY)
     world.ai = MistralClient(MISTRAL_API_KEY)
     world.metaprompter = MistralClient(MISTRAL_API_KEY)
 
