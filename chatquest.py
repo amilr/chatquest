@@ -170,10 +170,10 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #world.metaprompter = OpenAIClient(OPENAI_API_KEY)
     #world.ai = TogetherClient(TOGETHER_API_KEY)
     #world.metaprompter = TogetherClient(TOGETHER_API_KEY)
-    #world.ai = GroqClient(GROQ_API_KEY)
-    #world.metaprompter = GroqClient(GROQ_API_KEY)
-    world.ai = MistralClient(MISTRAL_API_KEY)
-    world.metaprompter = MistralClient(MISTRAL_API_KEY)
+    world.ai = GroqClient(GROQ_API_KEY)
+    world.metaprompter = GroqClient(GROQ_API_KEY)
+    #world.ai = MistralClient(MISTRAL_API_KEY)
+    #world.metaprompter = MistralClient(MISTRAL_API_KEY)
 
     world.set_creating()
 

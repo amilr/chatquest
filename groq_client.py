@@ -1,12 +1,13 @@
 from groq import Groq
 import prompts
+import json
 from ai_client import AIClient
 
 class GroqClient(AIClient):
     def __init__(self, api_key: str):
         super().__init__("Groq")
         self.client = Groq(api_key=api_key)
-        self.model = "llama3-70b-8192"
+        self.model = "moonshotai/kimi-k2-instruct"
 
     def init_chat(self):
         self.messages = [
@@ -29,6 +30,8 @@ class GroqClient(AIClient):
         return text
 
     def get_json_response(self, type):
+        json_schema_text = json.dumps(type.model_json_schema(), indent=2)
+        self.messages[-1]["content"] += f"\nThe response must be in JSON of this schema: {json_schema_text}"
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=self.messages,
