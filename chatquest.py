@@ -157,6 +157,29 @@ def print_map(grid):
     for row in grid:
         print(str(row).replace("''", "'   '"))
 
+def render_map(grid, player_location: Point) -> str:
+    """Return a string representation of the map using colored emoji."""
+    # Colors for up to seven different towns, cycle if more
+    colors = [
+        "🟥", "🟦", "🟩", "🟨", "🟪", "🟧", "🟫"
+    ]
+    empty = "⬜"
+    player_dot = "🔴"
+
+    lines = []
+    for y, row in enumerate(grid, start=1):
+        line = ""
+        for x, cell in enumerate(row, start=1):
+            if x == player_location.x and y == player_location.y:
+                line += player_dot
+            elif cell == "":
+                line += empty
+            else:
+                town_index = int(cell.split(":")[0]) - 1
+                line += colors[town_index % len(colors)]
+        lines.append(line)
+    return "\n".join(lines)
+
 async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global world_dict
 
@@ -426,6 +449,23 @@ async def attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # update place image
             world.places_npc_images_dict[world.get_place_key()].dirty = True
 
+
+async def show_map(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Display the world map as a colored grid with the player's position."""
+    global world_dict
+
+    world = get_world(update)
+
+    if world.not_started():
+        await display_none_status(update, context)
+        return
+    elif world.creating():
+        await display_creating_status(update, context)
+        return
+
+    map_text = render_map(world.map, world.location)
+    await send_message(update, context, map_text)
+
 # Actions
 async def act(update: Update, context: ContextTypes.DEFAULT_TYPE, target: int, action: str):
     global world_dict
@@ -538,6 +578,7 @@ def main():
     application.add_handler(CommandHandler("w", go_west))
     application.add_handler(CommandHandler("look", look))
     application.add_handler(CommandHandler("who", who))
+    application.add_handler(CommandHandler("map", show_map))
     application.add_handler(CommandHandler("attack", attack))
     application.add_handler(CommandHandler("1", act_1))
     application.add_handler(CommandHandler("2", act_2))
