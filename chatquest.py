@@ -178,10 +178,6 @@ def render_map(grid, player_location: Point) -> str:
 async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global world_dict
 
-    #img = imaging.generate_image_large(prompts.CREATE_TOWN_IMAGE.format("You have entered Cogwheel Hollow. A bustling town where robots and humans work side by side, creating intricate gadgets and magical tools. Its towering factories breathe steam and light, while friendly automaton vendors sell clockwork trinkets in lively markets."))
-    #await update.message.reply_photo(img)
-    #return
-
     world = new_world(update)
 
     world.ai = create_client(AI_PROVIDER)
