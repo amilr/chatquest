@@ -9,10 +9,7 @@ import mapgenerator as mapg
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from openai_client import OpenAIClient
-from together_client import TogetherClient
-from mistral_client import MistralClient
-from groq_client import GroqClient
+from client_factory import create_client
 
 import imaging
 from world import World, Town, Place, NPC, Point, TownList, PlaceList, NPCList, GenImage
@@ -32,10 +29,8 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_HOST = os.getenv('DB_HOST')
 DB_PORT = os.getenv('DB_PORT')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-TOGETHER_API_KEY = os.getenv('TOGETHER_API_KEY')
-MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY')
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+AI_PROVIDER = os.getenv('AI_PROVIDER', 'groq')
+METAPROMPTER_PROVIDER = os.getenv('METAPROMPTER_PROVIDER', AI_PROVIDER)
 
 world_dict = {}
 
@@ -189,14 +184,8 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     world = new_world(update)
 
-    #world.ai = OpenAIClient(OPENAI_API_KEY)
-    #world.metaprompter = OpenAIClient(OPENAI_API_KEY)
-    #world.ai = TogetherClient(TOGETHER_API_KEY)
-    #world.metaprompter = TogetherClient(TOGETHER_API_KEY)
-    world.ai = GroqClient(GROQ_API_KEY)
-    world.metaprompter = GroqClient(GROQ_API_KEY)
-    #world.ai = MistralClient(MISTRAL_API_KEY)
-    #world.metaprompter = MistralClient(MISTRAL_API_KEY)
+    world.ai = create_client(AI_PROVIDER)
+    world.metaprompter = create_client(METAPROMPTER_PROVIDER)
 
     world.set_creating()
 
