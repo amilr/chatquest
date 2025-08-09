@@ -1,13 +1,17 @@
 from groq import Groq
 import prompts
 import json
+import os
 from ai_client import AIClient
+
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'openai/gpt-oss-20b')
 
 class GroqClient(AIClient):
     def __init__(self, api_key: str):
         super().__init__("Groq")
         self.client = Groq(api_key=api_key)
-        self.model = "moonshotai/kimi-k2-instruct"
+        #self.model = "moonshotai/kimi-k2-instruct"
+        self.model = GROQ_MODEL
 
     def init_chat(self):
         self.messages = [
