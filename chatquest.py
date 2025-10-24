@@ -3,7 +3,6 @@ from io import BytesIO
 from typing import Dict, List
 from enum import Enum
 from pprint import pprint
-import database as db
 import prompts, metaprompts
 import mapgenerator as mapg
 from dotenv import load_dotenv
@@ -23,11 +22,6 @@ class Move(Enum):
 # parameters
 load_dotenv()
 
-DB_NAME = os.getenv('DB_NAME')
-DB_USER = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
-DB_HOST = os.getenv('DB_HOST')
-DB_PORT = os.getenv('DB_PORT')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 AI_PROVIDER = os.getenv('AI_PROVIDER', 'groq')
 METAPROMPTER_PROVIDER = os.getenv('METAPROMPTER_PROVIDER', AI_PROVIDER)
@@ -45,6 +39,7 @@ HELP_TEXT = """I'm here to create a game.
 
 def register_game_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
+    chat_key = f"chat_id:{chat_id}"
 
     if "chat_ids" not in context.bot_data:
         context.bot_data["chat_ids"] = set()
@@ -52,27 +47,23 @@ def register_game_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id not in context.bot_data["chat_ids"]:
         print("New chat ID detected")
         context.bot_data["chat_ids"].add(chat_id)
-        
-        chat_id_str = str(chat_id)
-        game_session_id = db.get_game_session(chat_id)
-        
-        if game_session_id:
-            print(f"Found existing game session in DB: {game_session_id}")
-        else:
-            game_session_id = db.create_game_session(chat_id)
-            print(f"Created new game session in DB: {game_session_id}")
-
-        messages = db.get_message_history(game_session_id)
         game_session = {
-            'id': game_session_id,
-            'history': messages
+            'id': chat_id,
+            'history': []
         }
-        context.bot_data["chat_id:" + chat_id_str] = game_session
-
+        context.bot_data[chat_key] = game_session
     else:
-        game_session = context.bot_data["chat_id:" + str(chat_id)]
-        game_session_id = game_session['id']
-        print(f"Found game session in context: {game_session_id}")
+        game_session = context.bot_data.get(chat_key)
+        if game_session is None:
+            # Ensure we always have a place to store the chat history
+            game_session = {
+                'id': chat_id,
+                'history': []
+            }
+            context.bot_data[chat_key] = game_session
+            print(f"Recreated missing game session context for {chat_id}")
+        else:
+            print(f"Found game session in context: {game_session['id']}")
 
     return game_session
 
@@ -83,9 +74,6 @@ def store_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message.text
     
     game_session['history'].append({'sender': username, 'message': message})
-    sequence = len(game_session['history'])
-    
-    #db.store_message_to_db(game_session['id'], sequence, username, message)
     
     print(game_session['id'])
     print(game_session['history'])
@@ -550,8 +538,6 @@ async def addnpc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_message(update, context, "NPC added")
 
 def main():
-    db.connect_to_db(dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT)
-
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -572,9 +558,9 @@ def main():
     application.add_handler(CommandHandler("talk", talk))
     application.add_handler(CommandHandler("addnpc", addnpc))
 
-    application.run_polling(stop_signals=None)
+    print("ChatQuest starting")
 
-    db.close_db_connection()
+    application.run_polling(stop_signals=None)
 
 if __name__ == '__main__':
     main()
