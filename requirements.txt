@@ -1,0 +1,9 @@
+groq
+httpx
+mistralai
+openai
+pydantic
+python-dotenv
+python-telegram-bot
+requests
+together
