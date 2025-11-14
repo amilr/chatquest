@@ -187,7 +187,7 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(world.description)
 
     # create world map
-    grid, town_places_count, start_location = mapg.generate_map(3, 2, 3)
+    grid, town_places_count, start_location = mapg.generate_map(5, 3, 5)
 
     print_map(grid)
     pprint(town_places_count)
