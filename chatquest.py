@@ -25,6 +25,7 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 AI_PROVIDER = os.getenv('AI_PROVIDER', 'groq')
 METAPROMPTER_PROVIDER = os.getenv('METAPROMPTER_PROVIDER', AI_PROVIDER)
+WORLD_DESCRIPTION_PROVIDER = os.getenv('WORLD_DESCRIPTION_PROVIDER', AI_PROVIDER)
 
 world_dict = {}
 
@@ -169,6 +170,7 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     world = new_world(update)
 
     world.ai = create_client(AI_PROVIDER)
+    world.story_architect_ai = create_client(WORLD_DESCRIPTION_PROVIDER)
     world.metaprompter = create_client(METAPROMPTER_PROVIDER)
 
     world.set_creating()
@@ -178,12 +180,12 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await display_creating_status(update, context)
 
     # create world
-    world.ai.init_chat()
+    world.story_architect_ai.init_chat()
 
     instruction = prompts.CREATE_NEW_GAME.format(update.message.text.replace('/newgame ', ''))
-    world.ai.prompt(instruction)
-    
-    world.description = world.ai.get_response()
+    world.story_architect_ai.prompt(instruction)
+
+    world.description = world.story_architect_ai.get_response()
     print(world.description)
 
     # create world map
@@ -198,8 +200,9 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # create towns
     await send_message(update, context, "Creating towns ...")
-    world.ai.prompt(prompts.CREATE_TOWNS.format(len(town_places_count)))
-    world.towns = world.ai.get_json_response(type = TownList).items
+    world.story_architect_ai.init_chat()
+    world.story_architect_ai.prompt(prompts.CREATE_TOWNS.format(len(town_places_count)))
+    world.towns = world.story_architect_ai.get_json_response(type = TownList).items
 
     # create places in towns
     await send_message(update, context, "Creating places ...")
