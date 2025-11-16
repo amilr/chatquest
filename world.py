@@ -36,8 +36,8 @@ class GenImage(BaseModel):
 
 class World:
     def __init__(self):
-        self.ai = None
         self.story_architect_ai = None
+        self.ai = None
         self.metaprompter = None
         self.description = None
         self.towns: List[Town] = None

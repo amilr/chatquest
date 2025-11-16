@@ -7,7 +7,7 @@ class OpenAIClient(AIClient):
     def __init__(self, api_key: str):
         super().__init__("OpenAI")
         self.client = OpenAI(api_key=api_key)
-        self.model = "gpt-4.1-mini-2025-04-14"
+        self.model = os.getenv('OPENAI_MODEL')
 
     def init_chat(self):
         self.messages = [
@@ -38,7 +38,7 @@ class OpenAIClient(AIClient):
                 model=self.model,
                 messages=self.messages,
                 response_format=type,
-                temperature=1.0,
+                temperature=0.9,
                 timeout=20
             )
         except Exception:

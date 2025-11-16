@@ -95,7 +95,7 @@ Previous appearance:
 """
 
 ACTION_NPC = """
-The player performs an action on the NPC. Describe what happens. Keep the description within 5 sentences.
+The player performs an action on the NPC. Describe what happens. Keep the description within 4 sentences.
 
 <ACTION>
 {}

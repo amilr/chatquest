@@ -23,9 +23,9 @@ class Move(Enum):
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-AI_PROVIDER = os.getenv('AI_PROVIDER', 'groq')
+STORY_ARCHITECT_PROVIDER = os.getenv('STORY_ARCHITECT_PROVIDER')
+AI_PROVIDER = os.getenv('AI_PROVIDER')
 METAPROMPTER_PROVIDER = os.getenv('METAPROMPTER_PROVIDER', AI_PROVIDER)
-WORLD_DESCRIPTION_PROVIDER = os.getenv('WORLD_DESCRIPTION_PROVIDER', AI_PROVIDER)
 
 world_dict = {}
 
@@ -169,8 +169,8 @@ async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     world = new_world(update)
 
+    world.story_architect_ai = create_client(STORY_ARCHITECT_PROVIDER)
     world.ai = create_client(AI_PROVIDER)
-    world.story_architect_ai = create_client(WORLD_DESCRIPTION_PROVIDER)
     world.metaprompter = create_client(METAPROMPTER_PROVIDER)
 
     world.set_creating()
@@ -558,6 +558,7 @@ def main():
     application.add_handler(CommandHandler("3", act_3))
     application.add_handler(CommandHandler("4", act_4))
     application.add_handler(CommandHandler("talk", talk))
+    application.add_handler(CommandHandler("t", talk))
     application.add_handler(CommandHandler("addnpc", addnpc))
 
     print("ChatQuest starting")
